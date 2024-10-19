@@ -25,7 +25,8 @@ SECRET_KEY = 'django-insecure-k!v58&rb2g-s*^nm3qiwzwc#u6f-g^n)y%iy-#^5=9-nws9h=5
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'desktop-dhbcd1p']
+
 
 
 # Application definition
@@ -38,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'app_user_register',
-    'app_order_register'
+    'app_order_register',
+    'corsheaders'
 ]
 
 MIDDLEWARE = [
@@ -49,6 +51,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
 ]
 
 ROOT_URLCONF = 'softcarbackend.urls'
@@ -77,13 +81,8 @@ WSGI_APPLICATION = 'softcarbackend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'djongo',
-        'NAME': 'nome_do_seu_banco_de_dados',
-        'ENFORCE_SCHEMA': False, 
-        'CLIENT': {
-            'host': 'localhost',
-            'port': 27017,
-        }
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',  # Isso cria um arquivo SQLite chamado db.sqlite3 na pasta do seu projeto
     }
 }
 
@@ -131,3 +130,12 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# settings.py
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:4200",     
+
+]
+
+CORS_ALLOW_ALL_ORIGINS = True
