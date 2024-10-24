@@ -1,35 +1,66 @@
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse, HttpResponseBadRequest
 from django.views.decorators.csrf import csrf_exempt
-import json
+from django.http import JsonResponse
+from rest_framework.views import APIView # type: ignore
+from rest_framework.response import Response # type: ignore
 from .models import FormEntry
+from .serializers import FormEntrySerializer
+from .models import FormEntry
+
+
+
+import json
 
 @csrf_exempt
 def submit_form(request):
-    print("Request body:", request.body) 
     if request.method == 'POST':
         try:
-            if not request.body:
-                return JsonResponse({'error': 'Empty body'}, status=400)
-
             data = json.loads(request.body)
+            print("JSON recebido:", data)
 
-            required_fields = ['client', 'telefone', 'carro', 'cor', 'placa', 'observacao']
-            for field in required_fields:
-                if field not in data:
-                    return JsonResponse({'error': f'Missing field: {field}'}, status=400)
+            required_fields = ['client', 'telefone', 'carro', 'cor', 'placa']
+            if not all(field in data for field in required_fields):
+                return HttpResponseBadRequest("Campos obrigatórios ausentes.")
 
-            entry = FormEntry.objects.create(
+            FormEntry.objects.create(
                 client=data['client'],
                 telefone=data['telefone'],
                 carro=data['carro'],
                 cor=data['cor'],
                 placa=data['placa'],
-                observacao=data['observacao']
+                observacao=data.get('observacao', '')
             )
-            return JsonResponse({'status': 'success', 'id': entry.id})
+            return JsonResponse({'message': 'Dados inseridos com sucesso!'}, status=201)
         except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON format'}, status=400)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            return HttpResponseBadRequest("JSON malformado.")
+        except KeyError as e:
+            return HttpResponseBadRequest(f"Campo ausente: {str(e)}")
+    return HttpResponseBadRequest("Método não permitido.")
 
-    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+
+
+def getClientById(request, id):
+    try:
+        client = FormEntry.objects.get(id=id)
+        data = {
+            'client': client.client,
+            'telefone': client.telefone,
+            'carro': client.carro,
+            'cor': client.cor,
+            'placa': client.placa,
+            'observacao': client.observacao,
+        }
+        return JsonResponse(data, safe=False)
+    except FormEntry.DoesNotExist:
+        return JsonResponse({'error': 'Client not found'}, status=404)
+
+
+
+
+class ClientListView(APIView):
+    def get(self, request):
+        clients = FormEntry.objects.all().order_by('-id')  # Orderna do mais recente para o mais antigo
+        serializer = FormEntrySerializer(clients, many=True)
+        return Response(serializer.data)
