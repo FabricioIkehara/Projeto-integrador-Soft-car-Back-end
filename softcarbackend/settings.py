@@ -41,7 +41,9 @@ INSTALLED_APPS = [
     'app_user_register',
     'app_order_register',
     'corsheaders',
-    'rest_framework'
+    'rest_framework',
+    
+    
 
 ]
 

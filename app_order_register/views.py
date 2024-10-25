@@ -1,38 +1,58 @@
-from django.http import JsonResponse
+from django.views import View
+from django.http import JsonResponse, HttpResponseBadRequest
 from django.views.decorators.csrf import csrf_exempt
-from .models import FormEntry
+from django.utils.decorators import method_decorator
+from .models import Order
 import json
 
-@csrf_exempt
-def submit_form(request):
-    if request.method == 'POST':
+@method_decorator(csrf_exempt, name='dispatch')
+class SubmitOrderView(View):
+    def post(self, request, *args, **kwargs):
         try:
+            # Carregar o corpo do request como JSON
             data = json.loads(request.body)
-            entry = FormEntry.objects.create(
-                client=data.get('client'),
-                telefone=data.get('telefone'),
-                carro=data.get('carro'),
-                cor=data.get('cor'),
-                placa=data.get('placa'),
-                observacao=data.get('observacao')
+            print("JSON recebido:", data)
+
+            # Verificar quais campos estão ausentes
+            required_fields = ['client', 'telefone', 'carro', 'cor', 'placa']
+            missing_fields = [field for field in required_fields if field not in data or not data[field]]
+
+            if missing_fields:
+                return JsonResponse(
+                    {'error': f'Campos obrigatórios ausentes ou vazios: {", ".join(missing_fields)}'},
+                    status=400
+                )
+
+            
+            order = Order.objects.create(
+                client=data['client'],
+                telefone=data['telefone'],
+                carro=data['carro'],
+                cor=data['cor'],
+                placa=data['placa'],
+                observacao=data.get("observacao", "") 
             )
-            return JsonResponse({'status': 'success', 'id': entry.id})
+            return JsonResponse({'message': 'Pedido adicionado com sucesso!', 'order_id': order.id}, status=201)
+
         except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+            return JsonResponse({'error': 'JSON malformado.'}, status=400)
+
+        except KeyError as e:
+            return JsonResponse({'error': f'Campo ausente: {str(e)}'}, status=400)
+
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-    return JsonResponse({'error': 'Invalid request'}, status=400)
+            print(f"Erro inesperado: {e}")
+            return JsonResponse({'error': 'Erro ao salvar pedido.'}, status=500)
 
 @csrf_exempt
-def submit_order(request):
-    if request.method == 'POST':
+def get_orders(request):
+    if request.method == 'GET':
         try:
-            data = json.loads(request.body)
-            # Lógica para registrar um pedido
-            # Por exemplo, pode-se criar um novo modelo para pedidos
-            return JsonResponse({'status': 'success'})
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+            
+            orders = list(Order.objects.values())
+            return JsonResponse(orders, safe=False, status=200)
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-    return JsonResponse({'error': 'Invalid request'}, status=400)
+            print(f"Erro ao buscar pedidos: {e}")
+            return JsonResponse({'error': 'Erro ao buscar pedidos.'}, status=500)
+    else:
+        return HttpResponseBadRequest("Método não permitido.")
